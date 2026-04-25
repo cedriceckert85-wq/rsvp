@@ -1,0 +1,1670 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, maximum-scale=1.0">
+<meta name="theme-color" content="#0a0a0a" id="meta-theme">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RSVP">
+<meta name="format-detection" content="telephone=no">
+<title>RSVP · Reader</title>
+<link rel="manifest" href='data:application/manifest+json,{"name":"RSVP Reader","short_name":"RSVP","start_url":".","display":"standalone","orientation":"any","background_color":"%230a0a0a","theme_color":"%230a0a0a","icons":[{"src":"data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 fill=%22%230a0a0a%22/><text x=%22256%22 y=%22340%22 font-family=%22Major Mono Display,monospace%22 font-size=%22240%22 fill=%22%23e8e4d9%22 text-anchor=%22middle%22>r<tspan fill=%22%23ff3c28%22>s</tspan>vp</text></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any maskable"}]}'>
+<link rel="apple-touch-icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><rect width="180" height="180" rx="40" fill="%230a0a0a"/><text x="90" y="118" font-family="Major Mono Display,monospace" font-size="52" fill="%23e8e4d9" text-anchor="middle">r<tspan fill="%23ff3c28">s</tspan>vp</text></svg>'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Major+Mono+Display&family=JetBrains+Mono:wght@300;400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ===== THEMES ===== */
+:root {
+  --bg: #0a0a0a;
+  --bg-2: #111;
+  --ink: #e8e4d9;
+  --ink-dim: #8a877f;
+  --ink-mute: #4a4842;
+  --red: #ff3c28;
+  --red-reticle: rgba(255, 60, 40, 0.6);
+  --red-glow: rgba(255, 60, 40, 0.35);
+  --cyan: #5ad6ff;
+  --cyan-glow: rgba(90, 214, 255, 0.5);
+  --line: #1e1d1a;
+  --grid: #151412;
+  --bar-bg: rgba(10, 10, 10, 0.6);
+  --toast-bg: rgba(10, 10, 10, 0.95);
+  --glow-top: rgba(255, 60, 40, 0.05);
+  --noise-opacity: 0.04;
+  --active-fg: #000;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+[data-theme="light"] {
+  --bg: #f4f1e8;
+  --bg-2: #e8e4d9;
+  --ink: #1a1916;
+  --ink-dim: #6a6760;
+  --ink-mute: #a5a199;
+  --red: #c82a12;
+  --red-reticle: rgba(200, 42, 18, 0.65);
+  --red-glow: rgba(200, 42, 18, 0.3);
+  --cyan: #0078a8;
+  --cyan-glow: rgba(0, 120, 168, 0.5);
+  --line: #d8d4c6;
+  --grid: #e5e0d2;
+  --bar-bg: rgba(244, 241, 232, 0.75);
+  --toast-bg: rgba(244, 241, 232, 0.95);
+  --glow-top: rgba(200, 42, 18, 0.05);
+  --noise-opacity: 0.02;
+  --active-fg: #f4f1e8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; width: 100%; overflow: hidden; overscroll-behavior: none; position: fixed; inset: 0; background: var(--bg); }
+body {
+  color: var(--ink);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1.55;
+  touch-action: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+  background-image:
+    radial-gradient(ellipse at top, var(--glow-top), transparent 60%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  transition: background-color 0.3s;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none;
+  opacity: var(--noise-opacity);
+  mix-blend-mode: overlay;
+  z-index: 1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
+}
+button { touch-action: manipulation; background: none; border: none; color: inherit; font: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; color: var(--ink); }
+
+/* ===== READER ===== */
+.reader { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 2; }
+
+/* Reticle — stronger, with gradient and glow */
+.reticle {
+  position: fixed;
+  left: 30vw;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, var(--red-reticle) 40%, var(--red-reticle) 60%, transparent);
+  box-shadow: 0 0 6px var(--red-glow);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 3;
+  transform: translateX(-1px);
+}
+@media (orientation: portrait) {
+  .reticle { height: 7vh; }
+  .reticle.top { top: calc(50vh - 15vh); }
+  .reticle.bottom { top: calc(50vh + 8vh); }
+}
+@media (orientation: landscape) {
+  .reticle { height: 18vh; }
+  .reticle.top { top: calc(var(--sat) + 10vh); }
+  .reticle.bottom { bottom: calc(var(--sab) + 10vh); }
+}
+
+.word {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--ink);
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  will-change: left;
+  z-index: 4;
+}
+.word .orp { color: var(--red); }
+.word.dim { color: var(--ink-mute); }
+.word.dim .orp { opacity: 0.35; }
+@media (orientation: portrait) { .word { font-size: clamp(40px, 13vw, 96px); } }
+@media (orientation: landscape) { .word { font-size: clamp(32px, 8vmin, 84px); } }
+
+/* ===== STATUS BAR ===== */
+.bar {
+  position: fixed;
+  top: calc(var(--sat) + 12px);
+  left: calc(var(--sal) + 14px);
+  right: calc(var(--sar) + 14px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bar-bg);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  z-index: 10;
+  transition: opacity 0.4s;
+}
+.bar.faded { opacity: 0.15; }
+.bar .dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  background: var(--red);
+  border-radius: 50%;
+  margin-right: 8px;
+  box-shadow: 0 0 8px var(--red);
+  animation: pulse 2s infinite ease-in-out;
+}
+.bar .dot.paused { background: var(--ink-mute); box-shadow: none; animation: none; }
+@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }
+.bar .left { display: flex; align-items: center; }
+.bar .middle {
+  flex: 1; text-align: center;
+  max-width: 45%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 0 10px;
+}
+.bar .right { font-family: 'JetBrains Mono'; }
+.bar .right .wpm-val { color: var(--red); font-weight: 500; }
+@media (orientation: portrait) and (min-height: 800px) {
+  .bar { top: calc(var(--sat) + 6px); left: calc(var(--sal) + 110px); right: calc(var(--sar) + 110px); border-radius: 100px; padding: 7px 14px; }
+}
+
+/* Pause indicator */
+.pause-ind {
+  position: fixed;
+  top: calc(var(--sat) + 64px);
+  right: calc(var(--sar) + 24px);
+  display: none;
+  gap: 4px;
+  z-index: 9;
+  pointer-events: none;
+}
+.pause-ind.show { display: flex; }
+.pause-ind span {
+  width: 5px; height: 24px;
+  background: var(--cyan);
+  border-radius: 1px;
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+@media (orientation: landscape) { .pause-ind { top: calc(var(--sat) + 46px); } }
+
+/* Scrub edge glow */
+.reader.scrubbing::before, .reader.scrubbing::after {
+  content: ""; position: fixed; top: 0; bottom: 0; width: 80px; pointer-events: none; z-index: 5;
+}
+.reader.scrub-left::before { left: 0; background: linear-gradient(to right, var(--red-glow), transparent); }
+.reader.scrub-right::after { right: 0; background: linear-gradient(to left, var(--red-glow), transparent); }
+
+/* Bottom hint */
+.bottom-hint {
+  position: fixed;
+  bottom: calc(var(--sab) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono';
+  font-size: 9px;
+  color: var(--ink-mute);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.4s;
+  white-space: nowrap;
+}
+.bottom-hint.faded { opacity: 0; }
+.bottom-hint b { color: var(--red); font-weight: 500; }
+
+/* ===== OVERLAYS ===== */
+.overlay {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 20;
+  background-image:
+    radial-gradient(ellipse at top, var(--glow-top), transparent 60%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+}
+.overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.overlay-inner {
+  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: calc(var(--sat) + 28px) calc(var(--sar) + 22px) calc(var(--sab) + 28px) calc(var(--sal) + 22px);
+  max-width: 640px; width: 100%; margin: 0 auto;
+}
+.overlay-inner::-webkit-scrollbar { display: none; }
+
+.ov-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bar-bg);
+  backdrop-filter: blur(6px);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 36px;
+}
+.ov-topbar .dot { display: inline-block; width: 7px; height: 7px; background: var(--red); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px var(--red); }
+.ov-hint {
+  font-family: 'JetBrains Mono';
+  color: var(--ink-dim);
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.ov-hint .arrow {
+  display: inline-block;
+  color: var(--red);
+  font-size: 12px;
+  animation: hint-pulse 2.5s infinite ease-in-out;
+}
+@keyframes hint-pulse {
+  0%,100% { transform: translateX(0); opacity: 1; }
+  50%     { transform: translateX(-4px); opacity: 0.6; }
+}
+.ov-hint.dir-right .arrow { animation-name: hint-pulse-r; }
+@keyframes hint-pulse-r {
+  0%,100% { transform: translateX(0); opacity: 1; }
+  50%     { transform: translateX(4px); opacity: 0.6; }
+}
+.ov-hint.dir-down .arrow { animation-name: hint-pulse-d; }
+@keyframes hint-pulse-d {
+  0%,100% { transform: translateY(0); opacity: 1; }
+  50%     { transform: translateY(4px); opacity: 0.6; }
+}
+
+.ov-hero {
+  padding: 6px 0 32px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 40px;
+}
+.ov-hero .sec-index {
+  color: var(--red);
+  font-family: 'JetBrains Mono';
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin: 24px 0 14px;
+}
+.ov-hero .sec-index::before { content: "◢ "; }
+.ov-hero h2 {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(32px, 8vw, 52px);
+  line-height: 1.05;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+.ov-hero .ov-desc {
+  color: var(--ink-dim);
+  font-size: 12.5px;
+  max-width: 540px;
+  line-height: 1.6;
+}
+
+/* Menu rows */
+.menu-rows { display: flex; flex-direction: column; gap: 2px; }
+.menu-row {
+  display: flex; flex-direction: column;
+  padding: 18px 18px 18px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 2px solid transparent;
+  gap: 6px;
+}
+.menu-row:active { background: color-mix(in srgb, var(--red) 5%, transparent); }
+.menu-row.sel { border-left-color: var(--red); background: color-mix(in srgb, var(--red) 6%, transparent); padding-left: 18px; }
+.menu-row .m-title {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.menu-row.sel .m-title { color: var(--red); }
+.menu-row .m-meta {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--ink-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.menu-row.current .m-title::before { content: "● "; color: var(--red); font-size: 0.55em; vertical-align: middle; margin-right: 4px; }
+.menu-row.action { margin-top: 20px; padding-top: 24px; border-top: 1px dashed var(--line); }
+.menu-row.action .m-title {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  color: var(--cyan);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.menu-row.action.sel { border-left-color: var(--cyan); background: color-mix(in srgb, var(--cyan) 5%, transparent); }
+.menu-row.action.sel .m-title { color: var(--cyan); }
+
+/* Progress view */
+.prog-title {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(24px, 5.5vw, 36px);
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+.prog-bar-wrap { width: 100%; height: 12px; border: 1px solid var(--ink-dim); border-radius: 2px; position: relative; margin-bottom: 32px; }
+.prog-bar-fill {
+  position: absolute;
+  left: 1px; top: 1px; bottom: 1px;
+  background: var(--red);
+  border-radius: 1px;
+  transition: width 0.3s;
+  box-shadow: 0 0 10px var(--red-glow);
+}
+.specs { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--line); }
+@media (min-width: 480px) {
+  .specs { grid-template-columns: 1fr 1fr; }
+  .specs .spec:nth-child(odd) { border-right: 1px solid var(--line); }
+}
+.spec {
+  padding: 18px 14px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 14px;
+  align-items: baseline;
+}
+.spec dt {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--red);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.spec dd {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.spec dd small {
+  display: block;
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-size: 10px;
+  color: var(--ink-dim);
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* Upload form */
+.form { display: flex; flex-direction: column; gap: 22px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--red);
+  text-transform: uppercase;
+}
+.field label::before { content: "◢ "; }
+.field input, .field textarea {
+  background: var(--bg-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  font-family: 'Instrument Serif', serif;
+  font-size: 17px;
+  outline: none;
+  -webkit-appearance: none;
+  border-radius: 2px;
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--red); }
+.field textarea {
+  font-family: 'JetBrains Mono';
+  font-size: 13px;
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.6;
+  font-weight: 300;
+}
+.file-btn {
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  color: var(--cyan);
+  border: 1px dashed var(--line);
+  padding: 16px;
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.file-btn:active { border-color: var(--cyan); border-style: solid; }
+.field input[type=file] { display: none; }
+.actions {
+  display: flex; gap: 12px; margin-top: 10px; padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.btn {
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 16px 22px;
+  cursor: pointer;
+  flex: 1;
+  min-height: 52px;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+.btn:active { border-color: var(--red); color: var(--red); }
+.btn.primary { border-color: var(--red); color: var(--red); }
+.btn.primary:active { background: var(--red); color: var(--active-fg); }
+
+/* ===== SETTINGS ===== */
+.settings-list { display: flex; flex-direction: column; gap: 28px; }
+.setting-row { display: flex; flex-direction: column; gap: 12px; }
+.setting-row .s-label {
+  font-family: 'JetBrains Mono';
+  font-size: 10.5px;
+  letter-spacing: 0.25em;
+  color: var(--red);
+  text-transform: uppercase;
+}
+.setting-row .s-label::before { content: "◢ "; }
+.setting-row .s-desc {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-dim);
+  line-height: 1.3;
+  margin-top: -4px;
+}
+.s-seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.s-seg button {
+  flex: 1;
+  padding: 14px 8px;
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  transition: all 0.15s;
+  min-height: 48px;
+}
+.s-seg button:last-child { border-right: none; }
+.s-seg button.active { background: var(--red); color: var(--active-fg); }
+.s-seg button:active:not(.active) { background: color-mix(in srgb, var(--red) 8%, transparent); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 14px 22px;
+  background: var(--toast-bg);
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+  transition: opacity 0.2s;
+  border-radius: 2px;
+  white-space: nowrap;
+  box-shadow: 0 0 20px var(--red-glow);
+  backdrop-filter: blur(6px);
+}
+.toast.show { opacity: 1; }
+
+/* ===== FIRST RUN ===== */
+.firstrun {
+  position: fixed; inset: 0;
+  display: none;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 100;
+  background-image:
+    radial-gradient(ellipse at top, var(--glow-top), transparent 60%),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.firstrun.show { display: flex; }
+.firstrun-inner {
+  padding: calc(var(--sat) + 28px) calc(var(--sar) + 24px) calc(var(--sab) + 28px) calc(var(--sal) + 24px);
+  max-width: 640px; width: 100%; margin: 0 auto; min-height: 100%;
+  display: flex; flex-direction: column;
+}
+.fr-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--bar-bg);
+  backdrop-filter: blur(6px);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 36px;
+}
+.fr-topbar .dot { display: inline-block; width: 7px; height: 7px; background: var(--red); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 8px var(--red); animation: pulse 2s infinite ease-in-out; }
+.fr-hero {
+  padding: 16px 0 32px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 40px;
+}
+.fr-tag {
+  color: var(--red);
+  font-family: 'JetBrains Mono';
+  font-weight: 500;
+  font-size: 10.5px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.fr-tag::before { content: "◢ "; }
+.fr-wordmark {
+  font-family: 'Major Mono Display', monospace;
+  font-weight: 400;
+  font-size: clamp(56px, 18vw, 120px);
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin-bottom: 22px;
+  word-break: break-word;
+}
+.fr-wordmark .r-accent { color: var(--red); display: inline-block; position: relative; }
+.fr-wordmark .r-accent::after {
+  content: ""; position: absolute; left: -3px; right: -3px; top: 35%;
+  height: 2px; background: var(--red); opacity: 0.45;
+}
+.fr-lede {
+  font-family: 'Instrument Serif', serif;
+  font-weight: 400;
+  font-size: clamp(18px, 4.2vw, 24px);
+  line-height: 1.35;
+  color: var(--ink);
+  max-width: 540px;
+  margin-bottom: 10px;
+}
+.fr-lede em { color: var(--red); font-style: italic; }
+.fr-sub { color: var(--ink-dim); font-size: 12px; max-width: 480px; line-height: 1.6; }
+
+.fr-block { margin-bottom: 40px; }
+.fr-block-index { font-family: 'JetBrains Mono'; font-size: 10.5px; letter-spacing: 0.2em; color: var(--red); text-transform: uppercase; margin-bottom: 12px; }
+.fr-block-title { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; font-size: clamp(24px, 5.5vw, 36px); line-height: 1.1; margin-bottom: 10px; color: var(--ink); }
+.fr-block-desc { color: var(--ink-dim); font-size: 12px; max-width: 480px; margin-bottom: 26px; line-height: 1.6; }
+.gestures { display: flex; flex-direction: column; gap: 14px; }
+.gest-row {
+  display: grid; grid-template-columns: 80px 1fr; gap: 20px;
+  align-items: baseline; padding-bottom: 14px;
+  border-bottom: 1px dashed var(--line);
+}
+.gest-row:last-child { border: none; padding-bottom: 0; }
+.gest-tag { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--red); letter-spacing: 0.15em; text-transform: uppercase; }
+.gest-desc { font-family: 'Instrument Serif', serif; font-size: 17px; color: var(--ink); line-height: 1.3; }
+.gest-desc em { color: var(--ink-dim); font-size: 11px; display: block; margin-top: 3px; font-family: 'JetBrains Mono'; font-style: normal; letter-spacing: 0.05em; text-transform: uppercase; }
+.fr-cta { margin-top: auto; padding-top: 30px; }
+.fr-btn {
+  display: block; width: 100%;
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  padding: 18px 24px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+.fr-btn:active { background: var(--red); color: var(--active-fg); }
+
+@media (orientation: landscape) {
+  .firstrun-inner { padding-top: calc(var(--sat) + 16px); padding-bottom: calc(var(--sab) + 16px); }
+  .fr-topbar { margin-bottom: 20px; }
+  .fr-hero { padding: 10px 0 20px; margin-bottom: 24px; }
+  .fr-wordmark { font-size: clamp(40px, 11vw, 90px); margin-bottom: 14px; }
+  .fr-lede { font-size: 18px; }
+  .fr-block { margin-bottom: 24px; }
+  .fr-block-title { font-size: 24px; }
+  .gestures { gap: 8px; }
+  .gest-row { padding-bottom: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="reader" id="reader">
+  <div class="reticle top"></div>
+  <div class="reticle bottom"></div>
+  <div class="word" id="word"></div>
+</div>
+
+<div class="bar faded" id="bar">
+  <span class="left"><span class="dot paused" id="status-dot"></span><span id="status-text">Bereit</span></span>
+  <span class="middle" id="bar-title">—</span>
+  <span class="right"><span class="wpm-val" id="wpm-val">300</span> WPM</span>
+</div>
+
+<div class="pause-ind" id="pause-ind"><span></span><span></span></div>
+
+<div class="bottom-hint faded" id="bottom-hint"><b>Tap</b> Pause · <b>↑↓</b> WPM · <b>→</b> Menü · <b>←</b> Info</div>
+
+<!-- Menu overlay -->
+<div class="overlay" id="ov-menu">
+  <div class="overlay-inner">
+    <div class="ov-topbar">
+      <span><span class="dot"></span>Menü aktiv</span>
+      <button class="ov-hint" id="menu-close" aria-label="Menü schließen"><span class="arrow">◂</span><span>schließen</span></button>
+    </div>
+    <div class="ov-hero">
+      <div class="sec-index">01 · Bibliothek</div>
+      <h2>Deine Bücher.</h2>
+      <p class="ov-desc">Wähle einen Titel. Halte einen Eintrag lange, um ihn zu löschen. Der Lesestand wird automatisch gespeichert.</p>
+    </div>
+    <div class="menu-rows" id="menu-list"></div>
+  </div>
+</div>
+
+<!-- Progress overlay -->
+<div class="overlay" id="ov-progress">
+  <div class="overlay-inner">
+    <div class="ov-topbar">
+      <span><span class="dot"></span>Info aktiv</span>
+      <button class="ov-hint dir-right" id="prog-close" aria-label="Fortschritt schließen"><span>schließen</span><span class="arrow">▸</span></button>
+    </div>
+    <div class="ov-hero">
+      <div class="sec-index">02 · Fortschritt</div>
+      <h2 id="prog-title">—</h2>
+      <p class="ov-desc">Dein Lesestand als Tachometer. Nur Zahlen, keine Ablenkung.</p>
+    </div>
+    <div class="prog-bar-wrap"><div class="prog-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <dl class="specs">
+      <div class="spec"><dt>Gelesen</dt><dd><span id="prog-pct">0</span>%<small id="prog-words">0 / 0 Wörter</small></dd></div>
+      <div class="spec"><dt>Verbleibend</dt><dd><span id="prog-remaining">—</span><small id="prog-finish">bei aktuellem Tempo</small></dd></div>
+      <div class="spec"><dt>Tempo</dt><dd><span id="prog-wpm">300</span> WPM<small>Lesegeschwindigkeit</small></dd></div>
+      <div class="spec"><dt>Heute</dt><dd><span id="prog-today">0</span><small>Wörter gelesen</small></dd></div>
+    </dl>
+  </div>
+</div>
+
+<!-- Upload overlay -->
+<div class="overlay" id="ov-upload">
+  <div class="overlay-inner">
+    <div class="ov-topbar">
+      <span><span class="dot"></span>Neues Buch</span>
+      <button class="ov-hint dir-down" id="upload-close" aria-label="Abbrechen"><span class="arrow">▾</span><span>wischen zum Abbrechen</span></button>
+    </div>
+    <div class="ov-hero">
+      <div class="sec-index">03 · Hinzufügen</div>
+      <h2>Text importieren.</h2>
+      <p class="ov-desc">Lade eine .txt Datei hoch oder füge Text direkt ein. Der Titel wird automatisch aus dem Dateinamen übernommen.</p>
+    </div>
+    <div class="form">
+      <div class="field">
+        <label>Titel</label>
+        <input id="inp-title" type="text" placeholder="z. B. Die Verwandlung" maxlength="80" autocomplete="off" autocapitalize="sentences">
+      </div>
+      <div class="field">
+        <label>Aus .txt Datei</label>
+        <label for="inp-file" class="file-btn">Datei wählen</label>
+        <input id="inp-file" type="file" accept=".txt,text/plain">
+      </div>
+      <div class="field">
+        <label>Oder Text einfügen</label>
+        <textarea id="inp-text" placeholder="Text hier einfügen …" autocomplete="off"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-save-upload">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="ov-settings">
+  <div class="overlay-inner">
+    <div class="ov-topbar">
+      <span><span class="dot"></span>Einstellungen</span>
+      <button class="ov-hint" id="settings-close" aria-label="Einstellungen schließen"><span class="arrow">◂</span><span>schließen</span></button>
+    </div>
+    <div class="ov-hero">
+      <div class="sec-index">04 · Konfiguration</div>
+      <h2>Einstellungen.</h2>
+      <p class="ov-desc">Darstellung, Verhalten und Textaufbereitung nach deinem Geschmack.</p>
+    </div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <div class="s-label">Darstellung</div>
+        <div class="s-desc">Heller oder dunkler Modus. "Auto" folgt dem System.</div>
+        <div class="s-seg" id="seg-theme">
+          <button data-val="dark">Dunkel</button>
+          <button data-val="light">Hell</button>
+          <button data-val="auto">Auto</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="s-label">Haptik</div>
+        <div class="s-desc">Vibration bei Gesten und Tempo­änderungen.</div>
+        <div class="s-seg" id="seg-haptics">
+          <button data-val="on">An</button>
+          <button data-val="off">Aus</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="s-label">Kompositum-Splitter</div>
+        <div class="s-desc">Lange deutsche Wörter in Silben aufteilen.</div>
+        <div class="s-seg" id="seg-split">
+          <button data-val="on">An</button>
+          <button data-val="off">Aus</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="s-label">WPM zurücksetzen</div>
+        <div class="s-desc">Tempo auf Standard 300 zurücksetzen.</div>
+        <div class="s-seg" id="seg-reset">
+          <button data-val="reset">Auf 300 setzen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- First run -->
+<div class="firstrun" id="firstrun">
+  <div class="firstrun-inner">
+    <div class="fr-topbar">
+      <span><span class="dot"></span>Prototyp · Rev 0.2</span>
+      <span>PWA · iPhone</span>
+    </div>
+    <div class="fr-hero">
+      <div class="fr-tag">Rapid Serial Visual Presentation</div>
+      <h1 class="fr-wordmark">r<span class="r-accent">s</span>vp<br>Reader</h1>
+      <p class="fr-lede">Ein Buch. <em>Ein Wort.</em> Ein Fixationspunkt.</p>
+      <p class="fr-sub">Lies Wort für Wort. Dein Auge bleibt still, der Text bewegt sich. Mit der Zeit trainierst du eine deutlich höhere Lesegeschwindigkeit — weil die Augenbewegung, die sonst 30% der Lesezeit frisst, entfällt.</p>
+    </div>
+    <div class="fr-block">
+      <div class="fr-block-index">01 · Interaktion</div>
+      <h2 class="fr-block-title">Fünf Gesten.<br>Keine Knöpfe.</h2>
+      <p class="fr-block-desc">Der gesamte Bildschirm ist dein Lesefeld. Gesten werden direkt darauf erkannt.</p>
+      <div class="gestures">
+        <div class="gest-row"><div class="gest-tag">◉ Tap</div><div class="gest-desc">Pause / Fortsetzen<em>Wort friert ein · Lesezeichen bleibt</em></div></div>
+        <div class="gest-row"><div class="gest-tag">↑↓ Swipe</div><div class="gest-desc">Tempo ändern<em>±25 WPM pro Wisch · 150–1000</em></div></div>
+        <div class="gest-row"><div class="gest-tag">→ Swipe</div><div class="gest-desc">Bibliothek öffnen<em>Bücher · Einstellungen · Import</em></div></div>
+        <div class="gest-row"><div class="gest-tag">← Swipe</div><div class="gest-desc">Fortschritt anzeigen<em>Lesestand und Statistik</em></div></div>
+        <div class="gest-row"><div class="gest-tag">◐ Halten</div><div class="gest-desc">Scrubbing<em>Links = rückwärts · rechts = vorwärts</em></div></div>
+      </div>
+    </div>
+    <div class="fr-cta">
+      <button class="fr-btn" id="firstrun-ok">▸ Los geht's</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const STORAGE_PREFIX = 'rsvp:';
+const STORAGE = {
+  get(k, fb=null) { try { const r = localStorage.getItem(STORAGE_PREFIX+k); return r==null?fb:JSON.parse(r); } catch(e){ return fb; } },
+  set(k, v) { try { localStorage.setItem(STORAGE_PREFIX+k, JSON.stringify(v)); return true; } catch(e){ toast('Speicher voll'); return false; } },
+  del(k) { try { localStorage.removeItem(STORAGE_PREFIX+k); return true; } catch(e){ return false; } },
+  list(p='') {
+    const out = []; const full = STORAGE_PREFIX+p;
+    for (let i=0; i<localStorage.length; i++) { const k=localStorage.key(i); if (k && k.startsWith(full)) out.push(k.slice(STORAGE_PREFIX.length)); }
+    return out;
+  }
+};
+
+const ORP_TABLE = [0,0,0,1,1,1,1,2,2,2,2,3,3,3];
+function orpIndex(len) { return len >= 14 ? 4 : (ORP_TABLE[len] ?? 0); }
+
+const COMPOUND_DICT = new Set(("abend|abschluss|alter|amt|anfang|angebot|anlage|arbeit|arzt|ausbau|ausbildung|ausdruck|ausland|auto|bad|bahn|bank|bau|baum|beitrag|bereich|berg|bericht|beruf|besitz|bestand|betrag|betrieb|bett|bewegung|bild|bildung|blatt|blick|blut|boden|brief|brot|brücke|buch|büro|dach|dampf|dank|decke|dienst|dorf|druck|ebene|eigentum|ende|energie|entwicklung|ereignis|erfahrung|erfolg|essen|fabrik|fahrt|fall|familie|farbe|feld|fenster|fest|feuer|figur|film|finger|fisch|flasche|fleisch|flug|fluss|folge|form|frage|frau|freiheit|freund|frieden|frucht|frühling|führung|funktion|fuß|gang|garten|gast|gebäude|gebiet|gedanke|gefahr|gefühl|gegend|gegenstand|geheim|geist|geld|gemeinde|geschäft|geschichte|geschmack|gesellschaft|gesetz|gesicht|gespräch|gesundheit|gewalt|gewinn|gewissen|glas|glaube|glück|gold|grenze|gruppe|grund|haar|halle|hals|halt|hand|haus|herz|hilfe|himmel|hof|höhe|holz|hotel|hund|idee|inhalt|insel|interesse|jahr|jugend|kaffee|kampf|kapitel|karte|katze|kauf|keller|kind|kirche|klasse|kleid|kopf|körper|kraft|krieg|kritik|kunst|land|leben|lehrer|licht|lied|linie|liste|luft|macht|mädchen|mann|markt|maschine|maß|material|meister|mensch|methode|minute|mitglied|mittel|monat|morgen|motor|mund|museum|musik|mutter|name|nation|natur|nerv|netz|not|nummer|oper|opfer|ort|paar|paket|papier|partner|pferd|pflanze|pflicht|plan|platz|polizei|politik|post|praxis|preis|prinzip|problem|produkt|projekt|prozess|prüfung|punkt|qualität|quelle|rand|rat|raum|rechnung|recht|rede|regel|regen|region|reihe|reise|rennen|richtung|ring|risiko|rolle|ruhe|sache|saft|salz|sand|satz|schaden|schale|schatten|schatz|scheibe|schein|schicht|schicksal|schiff|schlacht|schlaf|schlag|schloss|schluss|schlüssel|schmerz|schmuck|schnee|schönheit|schraube|schrift|schritt|schuh|schule|schuld|schutz|schwein|schwester|see|seele|seite|sekunde|sender|sicherheit|sieg|silber|sinn|situation|sitzung|soldat|sommer|sonne|sorge|spannung|spiegel|spiel|sport|sprache|staat|stadt|stamm|stand|stein|stelle|stern|stimme|stock|stoff|strand|straße|strecke|streit|stück|stuhl|stunde|sturm|system|tag|tal|tanz|tasche|tat|technik|teil|test|text|theater|thema|tier|tisch|titel|tochter|tod|ton|tor|tradition|traum|treppe|tuch|tür|turm|umwelt|unterricht|ursache|urteil|vater|verband|verbindung|verein|verfahren|vergleich|verhandlung|verkauf|verkehr|verlauf|verlust|vermögen|verständnis|vertrag|verwaltung|viertel|volk|vorbild|vorgang|vorhang|vorschlag|vorstand|waffe|wagen|wahl|wahrheit|wald|wand|wärme|wasser|weg|wein|weise|weisheit|welt|werk|werkzeug|wert|wesen|wetter|wiese|wille|wind|winter|wirkung|wirtschaft|wissen|wissenschaft|woche|wohnung|wolke|wort|zahl|zahn|zeichen|zeit|zeitung|zelle|zelt|zentrum|ziel|zimmer|zins|zone|zucker|zug|zukunft|zweifel|alt|best|frei|ganz|gut|halb|hart|hoch|klar|klein|kurz|lang|laut|leicht|nah|neu|rund|schnell|schön|schwer|stark|still|tief|voll|warm|weit|bundes|haupt|neben|ober|unter|ausbildungs|förderung|förderungs|regierungs|staats|kranken|panzer|panzerartig|verwandlung|versteifung|versteifungen|niedergleiten|ungeheuer|ungeziefer").split('|').filter(Boolean));
+
+const FUGEN = ['ens','es','er','en','s','n','e'];
+const MIN_PART = 3;
+const SPLIT_THRESHOLD = 14;
+
+function recursiveSplit(lower, start) {
+  const n = lower.length - start;
+  if (n < MIN_PART) return null;
+  if (COMPOUND_DICT.has(lower.slice(start))) return [lower.slice(start)];
+  const maxLen = Math.min(n - MIN_PART, 20);
+  for (let len = maxLen; len >= MIN_PART; len--) {
+    const head = lower.slice(start, start+len);
+    if (!COMPOUND_DICT.has(head)) continue;
+    const r1 = recursiveSplit(lower, start+len);
+    if (r1) return [head, ...r1];
+    for (const fug of FUGEN) {
+      if (lower.slice(start+len, start+len+fug.length) === fug) {
+        const r2 = recursiveSplit(lower, start+len+fug.length);
+        if (r2) return [head+fug, ...r2];
+      }
+    }
+  }
+  return null;
+}
+
+function splitCompound(word) {
+  if (!APP.splitOn) return [word];
+  if (word.length < SPLIT_THRESHOLD) return [word];
+  const lower = word.toLowerCase();
+  const parts = recursiveSplit(lower, 0);
+  if (!parts || parts.length < 2) return [word];
+  const result = []; let pos = 0;
+  for (const p of parts) { result.push(word.slice(pos, pos+p.length)); pos += p.length; }
+  return result.map((p,i) => i < result.length-1 ? p+'-' : p);
+}
+
+function tokenize(text) {
+  const tokens = [];
+  text = text.replace(/\r\n/g, '\n');
+  const paragraphs = text.split(/\n{2,}/);
+  paragraphs.forEach((p,i) => {
+    p.split(/\s+/).filter(Boolean).forEach(w => tokens.push(w));
+    if (i < paragraphs.length-1) tokens.push('¶');
+  });
+  return tokens;
+}
+
+function punctuationMult(w) {
+  if (w === '¶') return 3.0;
+  const last = w.replace(/["'\)\]\}]+$/,'').slice(-1);
+  if (',;:'.includes(last)) return 1.5;
+  if ('.!?'.includes(last)) return 2.5;
+  return 1.0;
+}
+
+function wordMs(w, base) {
+  let ms = base * punctuationMult(w);
+  const core = w.replace(/[.,;:!?()"¶]+$/,'').length;
+  if (core > 8) ms += (core - 8) * 15;
+  return Math.max(80, Math.min(2000, ms));
+}
+
+const APP = {
+  books: [], currentId: null, wordIndex: 0,
+  wpm: 300, playing: false, state: 'IDLE',
+  menuSel: 0, timeoutId: null, unsavedProgress: 0,
+  firstRunDone: false,
+  hapticsOn: true, splitOn: true,
+  theme: 'dark',
+  stats: { date: '', today: 0, total: 0 },
+};
+const WPM_MIN = 150, WPM_MAX = 1000, WPM_STEP = 25;
+
+const $ = id => document.getElementById(id);
+const el = {
+  reader: $('reader'), word: $('word'), pauseInd: $('pause-ind'),
+  bar: $('bar'), statusDot: $('status-dot'), statusText: $('status-text'),
+  barTitle: $('bar-title'), wpmVal: $('wpm-val'), bottomHint: $('bottom-hint'),
+  ovMenu: $('ov-menu'), ovProg: $('ov-progress'), ovUpload: $('ov-upload'), ovSettings: $('ov-settings'),
+  menuList: $('menu-list'),
+  progTitle: $('prog-title'), progFill: $('prog-fill'), progPct: $('prog-pct'),
+  progWords: $('prog-words'), progRemaining: $('prog-remaining'), progFinish: $('prog-finish'),
+  progWpm: $('prog-wpm'), progToday: $('prog-today'),
+  toast: $('toast'), firstrun: $('firstrun'), firstrunOk: $('firstrun-ok'),
+  inpTitle: $('inp-title'), inpFile: $('inp-file'), inpText: $('inp-text'),
+  btnSaveUpload: $('btn-save-upload'),
+  uploadClose: $('upload-close'), menuClose: $('menu-close'), progClose: $('prog-close'),
+  settingsClose: $('settings-close'),
+  segTheme: $('seg-theme'), segHaptics: $('seg-haptics'), segSplit: $('seg-split'), segReset: $('seg-reset'),
+  metaTheme: $('meta-theme'),
+};
+
+function toast(msg, ms=900) {
+  el.toast.textContent = msg;
+  el.toast.classList.add('show');
+  clearTimeout(el.toast._t);
+  el.toast._t = setTimeout(() => el.toast.classList.remove('show'), ms);
+}
+
+function haptic(p=10) {
+  if (!APP.hapticsOn) return;
+  try { if ('vibrate' in navigator) navigator.vibrate(p); } catch(e) {}
+}
+
+function currentBook() { return APP.books.find(b => b.id === APP.currentId) || null; }
+
+function hideAllOverlays() {
+  el.ovMenu.classList.remove('show');
+  el.ovProg.classList.remove('show');
+  el.ovUpload.classList.remove('show');
+  el.ovSettings.classList.remove('show');
+}
+
+function updateStatus() {
+  el.wpmVal.textContent = APP.wpm;
+  const book = currentBook();
+  el.barTitle.textContent = book ? book.title : '—';
+  if (APP.playing) {
+    el.statusDot.classList.remove('paused');
+    el.statusText.textContent = 'Lesen';
+    el.bar.classList.add('faded');
+  } else {
+    el.statusDot.classList.add('paused');
+    el.statusText.textContent = APP.state === 'SCRUB' ? 'Scrub' : 'Pause';
+    el.bar.classList.remove('faded');
+  }
+}
+
+// ---------- Theme ----------
+function applyTheme(mode) {
+  APP.theme = mode;
+  let actual = mode;
+  if (mode === 'auto') {
+    actual = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', actual);
+  if (el.metaTheme) el.metaTheme.setAttribute('content', actual === 'light' ? '#f4f1e8' : '#0a0a0a');
+  updateSegments();
+}
+
+function updateSegments() {
+  el.segTheme.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === APP.theme));
+  el.segHaptics.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === (APP.hapticsOn ? 'on' : 'off')));
+  el.segSplit.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.val === (APP.splitOn ? 'on' : 'off')));
+}
+
+// Watch system theme changes for auto mode
+if (matchMedia) {
+  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if (APP.theme === 'auto') applyTheme('auto');
+  });
+}
+
+// ---------- Word rendering ----------
+function renderWord(token, dim=false) {
+  if (!token) return;
+  if (token === '¶') {
+    el.word.innerHTML = '<span class="orp">¶</span>';
+    el.word.classList.toggle('dim', dim);
+    positionWord();
+    return;
+  }
+  const coreLen = token.replace(/[.,;:!?()"-]+$/,'').length || token.length;
+  const idx = orpIndex(coreLen);
+  let html = '';
+  [...token].forEach((c,i) => { html += (i===idx) ? `<span class="orp">${escapeHtml(c)}</span>` : escapeHtml(c); });
+  el.word.innerHTML = html;
+  el.word.classList.toggle('dim', dim);
+  requestAnimationFrame(positionWord);
+}
+
+function positionWord() {
+  const orpEl = el.word.querySelector('.orp');
+  if (!orpEl) { el.word.style.left = '0px'; return; }
+  const targetX = window.innerWidth * 0.30;
+  el.word.style.left = '0px';
+  const wr = el.word.getBoundingClientRect();
+  const or = orpEl.getBoundingClientRect();
+  const orpCenter = or.left - wr.left + or.width / 2;
+  el.word.style.left = (targetX - orpCenter) + 'px';
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- Stats ----------
+function todayKey() { return new Date().toISOString().slice(0,10); }
+
+function bumpStats(n=1) {
+  const today = todayKey();
+  if (APP.stats.date !== today) { APP.stats.date = today; APP.stats.today = 0; }
+  APP.stats.today += n;
+  APP.stats.total += n;
+}
+
+function saveStats() { STORAGE.set('stats', APP.stats); }
+
+// ---------- Engine ----------
+function tick() {
+  if (!APP.playing) return;
+  const book = currentBook();
+  if (!book) { stopPlayback(); return; }
+  if (APP.wordIndex >= book.words.length) {
+    stopPlayback();
+    haptic([30,60,30]);
+    el.word.innerHTML = '<span style="color:var(--ink-dim);font-family:Instrument Serif,serif;font-style:italic;font-size:0.5em">— Ende —</span>';
+    positionWord();
+    toast('Buch beendet');
+    return;
+  }
+  const token = book.words[APP.wordIndex];
+  const totalMs = wordMs(token, 60000 / APP.wpm);
+  const parts = splitCompound(token);
+  APP.wordIndex++;
+  APP.unsavedProgress++;
+  if (token !== '¶') bumpStats(1);
+  if (APP.unsavedProgress >= 30) { saveProgress(); saveStats(); APP.unsavedProgress = 0; }
+
+  if (parts.length === 1) {
+    renderWord(token, false);
+    APP.timeoutId = setTimeout(tick, totalMs);
+  } else {
+    displayParts(parts, totalMs, 0);
+  }
+}
+
+function displayParts(parts, totalMs, idx) {
+  if (!APP.playing) return;
+  if (idx >= parts.length) { APP.timeoutId = setTimeout(tick, 30); return; }
+  const totalChars = parts.reduce((s,p) => s+p.length, 0);
+  const partChars = parts[idx].length;
+  const partMs = Math.max(120, totalMs * (partChars / totalChars));
+  renderWord(parts[idx], false);
+  APP.timeoutId = setTimeout(() => displayParts(parts, totalMs, idx+1), partMs);
+}
+
+function startPlayback() {
+  const book = currentBook();
+  if (!book || !book.words.length) { openUpload(); return; }
+  if (APP.wordIndex >= book.words.length) APP.wordIndex = 0;
+  APP.playing = true;
+  APP.state = 'READING';
+  hideAllOverlays();
+  el.pauseInd.classList.remove('show');
+  el.word.classList.remove('dim');
+  el.bottomHint.classList.add('faded');
+  updateStatus();
+  haptic(8);
+  clearTimeout(APP.timeoutId);
+  tick();
+}
+
+function stopPlayback() {
+  APP.playing = false;
+  APP.state = 'PAUSED';
+  clearTimeout(APP.timeoutId);
+  el.pauseInd.classList.add('show');
+  if (el.word.querySelector('.orp')) el.word.classList.add('dim');
+  el.bottomHint.classList.remove('faded');
+  updateStatus();
+  saveProgress();
+  saveStats();
+  haptic(8);
+  setTimeout(() => el.bottomHint.classList.add('faded'), 3000);
+}
+
+function togglePlayback() { if (!currentBook()) { openUpload(); return; } APP.playing ? stopPlayback() : startPlayback(); }
+
+function setWpm(n) {
+  APP.wpm = Math.max(WPM_MIN, Math.min(WPM_MAX, n));
+  updateStatus();
+  saveSettings();
+  toast(APP.wpm + ' WPM');
+  haptic(5);
+}
+
+// ---------- Menu ----------
+function openMenu() {
+  clearTimeout(APP.timeoutId);
+  APP.playing = false;
+  APP.state = 'MENU';
+  const idx = APP.books.findIndex(b => b.id === APP.currentId);
+  APP.menuSel = idx >= 0 ? idx : 0;
+  renderMenuList();
+  hideAllOverlays();
+  el.ovMenu.classList.add('show');
+  updateStatus();
+}
+
+function renderMenuList() {
+  const rows = [];
+  APP.books.forEach((b, i) => {
+    const pct = b.words.length ? Math.floor(100 * (b.progress || 0) / b.words.length) : 0;
+    const sel = (i === APP.menuSel) ? ' sel' : '';
+    const cur = (b.id === APP.currentId) ? ' current' : '';
+    rows.push(`<div class="menu-row${sel}${cur}" data-action="book" data-idx="${i}">
+      <div class="m-title">${escapeHtml(b.title)}</div>
+      <div class="m-meta">${pct}% · ${b.words.length.toLocaleString('de')} Wörter</div>
+    </div>`);
+  });
+  rows.push(`<div class="menu-row action" data-action="new"><div class="m-title">+ Neues Buch</div></div>`);
+  rows.push(`<div class="menu-row action" data-action="settings"><div class="m-title">⚙ Einstellungen</div></div>`);
+  el.menuList.innerHTML = rows.join('');
+  el.menuList.querySelectorAll('.menu-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const act = row.dataset.action;
+      if (act === 'new') { openUpload(); return; }
+      if (act === 'settings') { openSettings(); return; }
+      APP.menuSel = parseInt(row.dataset.idx, 10);
+      selectMenuItem();
+    });
+    let lpTimer;
+    row.addEventListener('pointerdown', () => {
+      if (row.dataset.action !== 'book') return;
+      lpTimer = setTimeout(() => {
+        const idx = parseInt(row.dataset.idx, 10);
+        const book = APP.books[idx];
+        if (book && confirm(`"${book.title}" löschen?`)) {
+          deleteBook(book.id);
+          renderMenuList();
+          haptic(15);
+        }
+      }, 700);
+    });
+    row.addEventListener('pointerup', () => clearTimeout(lpTimer));
+    row.addEventListener('pointerleave', () => clearTimeout(lpTimer));
+  });
+}
+
+function moveMenu(dir) {
+  const max = APP.books.length - 1;
+  APP.menuSel = Math.max(0, Math.min(max, APP.menuSel + dir));
+  renderMenuList();
+  haptic(3);
+}
+
+function selectMenuItem() {
+  const book = APP.books[APP.menuSel];
+  if (!book) return;
+  APP.currentId = book.id;
+  APP.wordIndex = book.progress || 0;
+  saveSettings();
+  hideAllOverlays();
+  APP.state = 'PAUSED';
+  const token = book.words[APP.wordIndex] || book.words[0];
+  if (token) renderWord(token, true);
+  el.pauseInd.classList.add('show');
+  updateStatus();
+  haptic(10);
+}
+
+function closeMenu() { el.ovMenu.classList.remove('show'); APP.state = 'PAUSED'; updateStatus(); }
+
+// ---------- Progress ----------
+function openProgress() {
+  const book = currentBook();
+  if (!book) { toast('Kein Buch'); return; }
+  clearTimeout(APP.timeoutId);
+  APP.playing = false;
+  APP.state = 'PROGRESS';
+  const total = book.words.length;
+  const cur = APP.wordIndex;
+  const pct = total ? Math.floor(100 * cur / total) : 0;
+  el.progTitle.textContent = book.title;
+  el.progFill.style.width = pct + '%';
+  el.progPct.textContent = pct;
+  el.progWords.textContent = `${cur.toLocaleString('de')} / ${total.toLocaleString('de')} Wörter`;
+  const remaining = total - cur;
+  const minRemain = Math.round(remaining / APP.wpm);
+  el.progRemaining.textContent = minRemain + ' min';
+  // Estimated finish time
+  const now = new Date();
+  const finish = new Date(now.getTime() + minRemain * 60000);
+  const hh = finish.getHours().toString().padStart(2,'0');
+  const mm = finish.getMinutes().toString().padStart(2,'0');
+  el.progFinish.textContent = minRemain > 0 ? `fertig um ${hh}:${mm} Uhr` : 'fast fertig';
+  el.progWpm.textContent = APP.wpm;
+  // Today's words
+  if (APP.stats.date !== todayKey()) { APP.stats.date = todayKey(); APP.stats.today = 0; }
+  el.progToday.textContent = APP.stats.today.toLocaleString('de');
+  hideAllOverlays();
+  el.ovProg.classList.add('show');
+  updateStatus();
+}
+
+function closeProgress() { el.ovProg.classList.remove('show'); APP.state = 'PAUSED'; updateStatus(); }
+
+// ---------- Upload ----------
+function openUpload() {
+  el.inpTitle.value = ''; el.inpFile.value = ''; el.inpText.value = '';
+  hideAllOverlays();
+  el.ovUpload.classList.add('show');
+  setTimeout(() => el.inpTitle.focus(), 100);
+}
+function closeUpload() { el.ovUpload.classList.remove('show'); APP.state = 'PAUSED'; updateStatus(); }
+
+// ---------- Settings ----------
+function openSettings() {
+  hideAllOverlays();
+  el.ovSettings.classList.add('show');
+  APP.state = 'SETTINGS';
+  updateSegments();
+}
+function closeSettings() { el.ovSettings.classList.remove('show'); APP.state = 'PAUSED'; updateStatus(); }
+
+el.segTheme.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  applyTheme(b.dataset.val);
+  saveSettings();
+  haptic(8);
+  toast('Theme: ' + ({dark:'Dunkel',light:'Hell',auto:'Auto'}[b.dataset.val]));
+});
+el.segHaptics.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  APP.hapticsOn = b.dataset.val === 'on';
+  saveSettings();
+  updateSegments();
+  if (APP.hapticsOn) haptic(10);
+  toast('Haptik ' + (APP.hapticsOn ? 'An' : 'Aus'));
+});
+el.segSplit.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  APP.splitOn = b.dataset.val === 'on';
+  saveSettings();
+  updateSegments();
+  haptic(8);
+  toast('Splitter ' + (APP.splitOn ? 'An' : 'Aus'));
+});
+el.segReset.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  APP.wpm = 300;
+  saveSettings();
+  updateStatus();
+  haptic(12);
+  toast('WPM → 300');
+});
+
+el.inpFile.addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const text = await f.text();
+  el.inpText.value = text;
+  if (!el.inpTitle.value) el.inpTitle.value = f.name.replace(/\.txt$/i,'').replace(/_/g,' ');
+});
+el.btnSaveUpload.addEventListener('click', async () => {
+  const title = el.inpTitle.value.trim();
+  const text = el.inpText.value.trim();
+  if (!text) { toast('Kein Text'); return; }
+  const finalTitle = title || 'Ohne Titel ' + (APP.books.length+1);
+  const book = await addBook(finalTitle, text);
+  if (book) {
+    APP.currentId = book.id;
+    APP.wordIndex = 0;
+    saveSettings();
+    closeUpload();
+    toast('Hinzugefügt');
+    haptic([10,30,10]);
+    openMenu();
+  }
+});
+// Close buttons still work as click fallback (accessibility + desktop)
+el.uploadClose.addEventListener('click', closeUpload);
+el.menuClose.addEventListener('click', closeMenu);
+el.progClose.addEventListener('click', closeProgress);
+el.settingsClose.addEventListener('click', closeSettings);
+
+// ---------- Overlay swipe-to-close ----------
+// Attaches a swipe gesture to close an overlay without blocking taps on items inside.
+// predicate(dx, dy) returns true if the gesture should close.
+function attachOverlayGestures(overlayEl, predicate, closeFn) {
+  let start = null;
+  let swiped = false;
+
+  overlayEl.addEventListener('pointerdown', e => {
+    start = { x: e.clientX, y: e.clientY, t: Date.now() };
+    swiped = false;
+  });
+
+  overlayEl.addEventListener('pointermove', e => {
+    if (!start) return;
+    const dx = Math.abs(e.clientX - start.x);
+    const dy = Math.abs(e.clientY - start.y);
+    // Mark as swipe once we cross a small threshold — prevents accidental close on jitter
+    if (dx > 30 || dy > 40) swiped = true;
+  });
+
+  overlayEl.addEventListener('pointerup', e => {
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    const dt = Date.now() - start.t;
+    const wasSwipe = swiped;
+    start = null;
+    if (!wasSwipe || dt > 700) return;
+    if (predicate(dx, dy)) {
+      closeFn();
+      haptic(12);
+    }
+  });
+
+  overlayEl.addEventListener('pointercancel', () => { start = null; swiped = false; });
+
+  // Suppress click events that follow a swipe (prevents accidental menu-row taps)
+  overlayEl.addEventListener('click', e => {
+    if (swiped) { e.preventDefault(); e.stopPropagation(); swiped = false; }
+  }, true);
+}
+
+// Menu: swipe LEFT to close (inverse of the right-swipe that opened it)
+attachOverlayGestures(el.ovMenu,
+  (dx, dy) => dx < -50 && Math.abs(dy) < 80,
+  closeMenu);
+
+// Progress: swipe RIGHT to close (inverse of the left-swipe that opened it)
+attachOverlayGestures(el.ovProg,
+  (dx, dy) => dx > 50 && Math.abs(dy) < 80,
+  closeProgress);
+
+// Settings: swipe in either horizontal direction closes
+attachOverlayGestures(el.ovSettings,
+  (dx, dy) => Math.abs(dx) > 50 && Math.abs(dy) < 80,
+  closeSettings);
+
+// Upload: swipe DOWN on the topbar closes (so typing in inputs still works freely)
+(function attachUploadDismiss() {
+  const topbar = el.ovUpload.querySelector('.ov-topbar');
+  let start = null;
+  topbar.addEventListener('pointerdown', e => {
+    if (e.target.closest('button') && e.target.closest('.ov-hint') === null) return;
+    start = { x: e.clientX, y: e.clientY };
+  });
+  topbar.addEventListener('pointerup', e => {
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    start = null;
+    if (dy > 40 || Math.abs(dx) > 50) { closeUpload(); haptic(12); }
+  });
+  topbar.addEventListener('pointercancel', () => { start = null; });
+})();
+
+// ---------- Persistence ----------
+function saveSettings() {
+  STORAGE.set('settings', {
+    wpm: APP.wpm, currentId: APP.currentId,
+    firstRunDone: APP.firstRunDone,
+    hapticsOn: APP.hapticsOn, splitOn: APP.splitOn,
+    theme: APP.theme,
+  });
+}
+
+function saveProgress() {
+  if (!APP.currentId) return;
+  const book = currentBook();
+  if (!book) return;
+  book.progress = APP.wordIndex;
+  STORAGE.set('book:'+book.id, {
+    id: book.id, title: book.title, words: book.words,
+    progress: book.progress, created: book.created,
+  });
+}
+
+async function loadAll() {
+  const s = STORAGE.get('settings', {});
+  APP.wpm = s.wpm || 300;
+  APP.currentId = s.currentId || null;
+  APP.firstRunDone = s.firstRunDone || false;
+  APP.hapticsOn = s.hapticsOn !== false;
+  APP.splitOn = s.splitOn !== false;
+  APP.theme = s.theme || 'dark';
+  applyTheme(APP.theme);
+
+  const stats = STORAGE.get('stats', { date: todayKey(), today: 0, total: 0 });
+  if (stats.date !== todayKey()) { stats.date = todayKey(); stats.today = 0; }
+  APP.stats = stats;
+
+  const keys = STORAGE.list('book:');
+  const books = [];
+  for (const k of keys) { const d = STORAGE.get(k); if (d && d.words) books.push(d); }
+  books.sort((a,b) => (a.created||0) - (b.created||0));
+  APP.books = books;
+
+  if (APP.books.length === 0) await seedDemo();
+  if (APP.currentId && currentBook()) APP.wordIndex = currentBook().progress || 0;
+  else if (APP.books.length > 0) {
+    APP.currentId = APP.books[0].id;
+    APP.wordIndex = APP.books[0].progress || 0;
+  }
+
+  updateStatus();
+  const book = currentBook();
+  if (book && book.words.length) {
+    const token = book.words[Math.min(APP.wordIndex, book.words.length - 1)];
+    renderWord(token, true);
+    el.pauseInd.classList.add('show');
+  }
+
+  if (!APP.firstRunDone) el.firstrun.classList.add('show');
+  else {
+    el.bottomHint.classList.remove('faded');
+    setTimeout(() => el.bottomHint.classList.add('faded'), 3500);
+  }
+}
+
+async function seedDemo() {
+  const demo = `Als Gregor Samsa eines Morgens aus unruhigen Träumen erwachte, fand er sich in seinem Bett zu einem ungeheueren Ungeziefer verwandelt. Er lag auf seinem panzerartig harten Rücken und sah, wenn er den Kopf ein wenig hob, seinen gewölbten, braunen, von bogenförmigen Versteifungen geteilten Bauch, auf dessen Höhe sich die Bettdecke, zum gänzlichen Niedergleiten bereit, kaum noch erhalten konnte. Seine vielen, im Vergleich zu seinem sonstigen Umfang kläglich dünnen Beine flimmerten ihm hilflos vor den Augen.
+
+Was ist mit mir geschehen? dachte er. Es war kein Traum. Sein Zimmer, ein richtiges, nur etwas zu kleines Menschenzimmer, lag ruhig zwischen den vier wohlbekannten Wänden.`;
+  await addBook('Die Verwandlung — Kafka', demo);
+}
+
+async function addBook(title, text) {
+  const words = tokenize(text);
+  if (!words.length) return false;
+  const id = 'b_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const book = { id, title: title.slice(0,80) || 'Ohne Titel', words, progress: 0, created: Date.now() };
+  APP.books.push(book);
+  STORAGE.set('book:'+id, book);
+  if (!APP.currentId) { APP.currentId = id; saveSettings(); }
+  return book;
+}
+
+function deleteBook(id) {
+  STORAGE.del('book:'+id);
+  APP.books = APP.books.filter(b => b.id !== id);
+  if (APP.currentId === id) {
+    APP.currentId = APP.books.length ? APP.books[0].id : null;
+    APP.wordIndex = APP.currentId ? (currentBook().progress || 0) : 0;
+    saveSettings();
+  }
+}
+
+// ---------- Gestures ----------
+let touchStart = null, holdTimer = null, scrubInterval = null, scrubAccelTimer = null;
+let scrubDir = 0, scrubIndex = 0;
+const SWIPE_MIN = 35, SWIPE_MAX_MS = 500, TAP_MAX = 180;
+const HOLD_TRIGGER_MS = 320, HOLD_SLOW_MS = 260, HOLD_FAST_MS = 110, HOLD_ACCEL_AFTER_MS = 900;
+
+function startScrub(dir) {
+  if (APP.state === 'MENU' || APP.state === 'PROGRESS' || APP.state === 'SETTINGS') return;
+  const book = currentBook();
+  if (!book || !book.words.length) return;
+  if (APP.playing) { APP.playing = false; clearTimeout(APP.timeoutId); }
+  APP.state = 'SCRUB';
+  scrubDir = dir;
+  scrubIndex = Math.max(0, Math.min(book.words.length - 1, APP.wordIndex - 1));
+  el.pauseInd.classList.add('show');
+  el.reader.classList.add('scrubbing');
+  el.reader.classList.toggle('scrub-left', dir < 0);
+  el.reader.classList.toggle('scrub-right', dir > 0);
+  haptic(8);
+  scrubStep();
+  scrubInterval = setInterval(scrubStep, HOLD_SLOW_MS);
+  scrubAccelTimer = setTimeout(() => {
+    clearInterval(scrubInterval);
+    scrubInterval = setInterval(scrubStep, HOLD_FAST_MS);
+    haptic(5);
+  }, HOLD_ACCEL_AFTER_MS);
+  updateStatus();
+}
+
+function scrubStep() {
+  const book = currentBook();
+  if (!book) { stopScrub(); return; }
+  scrubIndex = Math.max(0, Math.min(book.words.length - 1, scrubIndex + scrubDir));
+  const token = book.words[scrubIndex];
+  if (token) renderWord(token, true);
+}
+
+function stopScrub() {
+  if (scrubInterval) { clearInterval(scrubInterval); scrubInterval = null; }
+  if (scrubAccelTimer) { clearTimeout(scrubAccelTimer); scrubAccelTimer = null; }
+  if (APP.state !== 'SCRUB') return;
+  APP.wordIndex = scrubIndex + 1;
+  APP.state = 'PAUSED';
+  el.reader.classList.remove('scrubbing', 'scrub-left', 'scrub-right');
+  updateStatus();
+  saveProgress();
+  haptic(10);
+}
+
+el.reader.addEventListener('pointerdown', e => {
+  if (el.firstrun.classList.contains('show')) return;
+  touchStart = { x: e.clientX, y: e.clientY, t: Date.now() };
+  const isLeft = e.clientX < window.innerWidth / 2;
+  const dir = isLeft ? -1 : 1;
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => {
+    if (touchStart) { startScrub(dir); touchStart = null; }
+  }, HOLD_TRIGGER_MS);
+});
+el.reader.addEventListener('pointermove', e => {
+  if (!touchStart) return;
+  const dx = Math.abs(e.clientX - touchStart.x);
+  const dy = Math.abs(e.clientY - touchStart.y);
+  if (dx > SWIPE_MIN || dy > SWIPE_MIN) { clearTimeout(holdTimer); holdTimer = null; }
+});
+el.reader.addEventListener('pointerup', e => {
+  clearTimeout(holdTimer); holdTimer = null;
+  if (APP.state === 'SCRUB') { stopScrub(); touchStart = null; return; }
+  if (!touchStart) return;
+  const dx = e.clientX - touchStart.x;
+  const dy = e.clientY - touchStart.y;
+  const dt = Date.now() - touchStart.t;
+  touchStart = null;
+  const adx = Math.abs(dx), ady = Math.abs(dy);
+  if (dt <= TAP_MAX && adx < SWIPE_MIN && ady < SWIPE_MIN) handleTap();
+  else if (dt <= SWIPE_MAX_MS) {
+    if (adx > ady && adx >= SWIPE_MIN) { dx > 0 ? handleSwipeRight() : handleSwipeLeft(); }
+    else if (ady > adx && ady >= SWIPE_MIN) { dy < 0 ? handleSwipeUp() : handleSwipeDown(); }
+  }
+});
+el.reader.addEventListener('pointercancel', () => {
+  clearTimeout(holdTimer); holdTimer = null;
+  if (APP.state === 'SCRUB') stopScrub();
+  touchStart = null;
+});
+
+function handleTap() { togglePlayback(); }
+function handleSwipeUp() { setWpm(APP.wpm + WPM_STEP); }
+function handleSwipeDown() { setWpm(APP.wpm - WPM_STEP); }
+function handleSwipeLeft() { openProgress(); }
+function handleSwipeRight() { openMenu(); }
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (el.ovMenu.classList.contains('show')) {
+    if (e.key === 'ArrowUp') { e.preventDefault(); moveMenu(-1); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); moveMenu(1); }
+    else if (e.key === 'Enter') { e.preventDefault(); selectMenuItem(); }
+    else if (e.key === 'Escape') closeMenu();
+    return;
+  }
+  if (el.ovProg.classList.contains('show')) { if (e.key === 'Escape' || e.key === 'ArrowRight') closeProgress(); return; }
+  if (el.ovUpload.classList.contains('show')) { if (e.key === 'Escape') closeUpload(); return; }
+  if (el.ovSettings.classList.contains('show')) { if (e.key === 'Escape') closeSettings(); return; }
+  switch (e.key) {
+    case ' ': e.preventDefault(); handleTap(); break;
+    case 'ArrowUp': e.preventDefault(); handleSwipeUp(); break;
+    case 'ArrowDown': e.preventDefault(); handleSwipeDown(); break;
+    case 'ArrowLeft': e.preventDefault(); openProgress(); break;
+    case 'ArrowRight': e.preventDefault(); openMenu(); break;
+    case 'n': case 'N': openUpload(); break;
+    case ',': openSettings(); break;
+  }
+});
+
+window.addEventListener('resize', () => { if (el.word.querySelector('.orp')) requestAnimationFrame(positionWord); });
+window.addEventListener('orientationchange', () => { setTimeout(() => { if (el.word.querySelector('.orp')) positionWord(); }, 300); });
+window.addEventListener('beforeunload', () => { saveProgress(); saveStats(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (APP.playing) stopPlayback(); saveProgress(); saveStats(); }
+});
+
+el.firstrunOk.addEventListener('click', () => {
+  el.firstrun.classList.remove('show');
+  APP.firstRunDone = true;
+  saveSettings();
+  el.bottomHint.classList.remove('faded');
+  setTimeout(() => el.bottomHint.classList.add('faded'), 3500);
+  haptic(15);
+});
+
+(async () => { try { await loadAll(); } catch(e) { console.error('boot', e); } })();
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'rsvp-v2';
+    self.addEventListener('install', e => self.skipWaiting());
+    self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.open(CACHE).then(cache =>
+        cache.match(e.request).then(resp =>
+          resp || fetch(e.request).then(r => {
+            if (e.request.method === 'GET' && r.status === 200) cache.put(e.request, r.clone());
+            return r;
+          }).catch(() => resp)
+        )
+      ));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+}
+</script>
+</body>
+</html>
